@@ -16,7 +16,7 @@ Foram utilizadas libraries compiladas especificamente para o uso com o G++ do Mi
 * [VS Code](https://code.visualstudio.com/)
 
 ## Objetivos
-* Visão isoétrica (slide, staggered ou diamond)
+* Visão isométrica (slide, staggered ou diamond)
 * Arquivos de configuração para mapas
 * Detecção de tiles caminháveis
 * Personagem animado
