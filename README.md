@@ -22,7 +22,6 @@ Foram utilizadas libraries compiladas especificamente para o uso com o G++ do Mi
 * Personagem animado
 * Movimentação de 8 direções
 * Detecção de clique para interação com tile
-
 * Mapa multicamada
 * Controle de NPCs (path finding)
 * Menus e interface
