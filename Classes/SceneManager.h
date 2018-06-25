@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Shader.h"
+#include <Classes/Shader.h>
 #include <GLM/glm.hpp>
 #include <GLM/GTC/matrix_transform.hpp>
 #include <GLM/GTC/type_ptr.hpp>
@@ -20,6 +20,14 @@ public:
 	static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
 	static void resize(GLFWwindow* window, int width, int height);
 
+	void setupMap();
+	void renderMap();
+	void setupMapTexture();
+
+	void setupCharacter();
+	void renderCharacter();
+	void setupCharacterTexture();
+
 	void doMovement();
 	void render();
 	void run();
@@ -37,7 +45,7 @@ private:
 	Shader *shader;
 
 	// Scene attributes
-	GLuint VAO;
+	GLuint mapVAO, characterVAO;
 
 	// Transformations - Model Matrix
 	glm::mat4 modelMatrix;
@@ -47,5 +55,8 @@ private:
 
 	//Texture index
 	unsigned int texture;
+
+	int mapLayout[10][10];
+	int mapCanWalk[10][10];
 };
 

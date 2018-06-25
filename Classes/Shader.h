@@ -8,7 +8,7 @@
 #include <GLAD/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "./STB_Image.h"
+#include <Classes/STB_Image.h>
 
 using namespace std;
 
