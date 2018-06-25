@@ -1,6 +1,6 @@
 using namespace std;
 
-#include "../Classes/SceneManager.h"
+#include <Classes/SceneManager.h>
 
 int main() {
 	SceneManager *scene = new SceneManager;
