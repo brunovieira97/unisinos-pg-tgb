@@ -20,14 +20,17 @@ public:
 	static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
 	static void resize(GLFWwindow* window, int width, int height);
 
+	// Map
 	void setupMap();
 	void renderMap();
 	void setupMapTexture();
 
+	// Character
 	void setupCharacter();
 	void renderCharacter();
 	void setupCharacterTexture();
 
+	// Main functions
 	void doMovement();
 	void render();
 	void run();
@@ -53,8 +56,7 @@ private:
 	// 2D Camera - Projection matrix
 	glm::mat4 projectionMatrix;
 
-	//Texture index
-	unsigned int texture;
+	unsigned int mapTexture, characterTexture;
 
 	int mapLayout[10][10];
 	int mapCanWalk[10][10];

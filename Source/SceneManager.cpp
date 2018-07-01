@@ -94,6 +94,15 @@ void SceneManager::doMovement() {
 		glfwSetWindowShouldClose(window, GL_TRUE);
 }
 
+void SceneManager::render() {
+	// Clear the colorbuffer
+	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	renderMap();
+	renderCharacter();
+}
+
 void SceneManager::renderMap() {
 	// Clear the colorbuffer
 	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
@@ -131,7 +140,7 @@ void SceneManager::renderMap() {
 			}
 
 			// Bind Textures using texture units
-			glBindTexture(GL_TEXTURE_2D, texture);
+			glBindTexture(GL_TEXTURE_2D, mapTexture);
 			glUniform1i(glGetUniformLocation(shader->Program, "ourTexture1"), 0);
 
 			// render container
@@ -142,8 +151,37 @@ void SceneManager::renderMap() {
 	}
 }
 
-void SceneManager::render() {
-	renderMap();
+void SceneManager::renderCharacter() {
+	shader->Use();
+
+	float xi = 0.0, yi = 0.0, xo = 500;
+
+	GLint offsetLoc = glGetUniformLocation(shader->Program, "offsetUV");
+	glm::vec2 offset(1/6.0, 0.0);
+	glUniform2f(offsetLoc, offset.x,offset.y);
+
+	// Create transformations
+	modelMatrix = glm::mat4();
+	modelMatrix = glm::translate(modelMatrix, glm::vec3(xi,yi,0.0));
+
+	// Get their uniform location
+	GLint modelLoc = glGetUniformLocation(shader->Program, "model");
+
+	// Pass them to the shaders
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMatrix));
+
+	if (resized) {
+		setupCamera2D();
+		resized = false;
+	}
+
+	// Bind Textures using texture units
+	glBindTexture(GL_TEXTURE_2D, characterTexture);
+	glUniform1i(glGetUniformLocation(shader->Program, "ourTexture1"), 0);
+
+	// render container
+	glBindVertexArray(characterVAO);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
 
 void SceneManager::run() {
@@ -202,6 +240,10 @@ void SceneManager::setupMap() {
 	// texture coord attribute
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 	glEnableVertexAttribArray(2);
+
+	setupMapTexture();
+
+	glBindVertexArray(0);
 }
 
 void SceneManager::setupCharacter() {
@@ -245,14 +287,17 @@ void SceneManager::setupCharacter() {
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 	glEnableVertexAttribArray(2);
 
+	setupCharacterTexture();
+
+	glBindVertexArray(0);
 }
 
 void SceneManager::setupScene() {
 	setupMap();
-	setupMapTexture();
+	renderMap();
 
-	//setupCharacter();
-	//setupCharacterTexture();
+	setupCharacter();
+	renderCharacter();
 
 }
 
@@ -273,8 +318,8 @@ void SceneManager::setupCamera2D() {
 }
 
 void SceneManager::setupMapTexture() {
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture); 
+	glGenTextures(1, &mapTexture);
+	glBindTexture(GL_TEXTURE_2D, mapTexture); 
 	
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -283,20 +328,53 @@ void SceneManager::setupMapTexture() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	int textureWidth, textureHeight, channelCount;
-	unsigned char *data = stbi_load("Resources/Terrain_Tileset.png", &textureWidth, &textureHeight, &channelCount, 0);
+	unsigned char *mapData = stbi_load("Resources/Terrain_Tileset.png", &textureWidth, &textureHeight, &channelCount, 0);
 	
 	cout << "MAP TEXTURE INFO";
 	cout << "Channel count: " << channelCount << endl;
 	cout << "Width x Height: " << textureWidth << " x " << textureHeight << endl;
 
-	if (data) {
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+	if (mapData) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, mapData);
 		glGenerateMipmap(GL_TEXTURE_2D);
 	} else {
 		std::cout << "Failed to load texture." << std::endl;
 	}
 
-	stbi_image_free(data);
+	stbi_image_free(mapData);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glActiveTexture(GL_TEXTURE0);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+void SceneManager::setupCharacterTexture() {
+	glGenTextures(1, &characterTexture);
+	glBindTexture(GL_TEXTURE_2D, characterTexture); 
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	int textureWidth, textureHeight, channelCount;
+	unsigned char *characterData = stbi_load("Resources/Character_Tileset.png", &textureWidth, &textureHeight, &channelCount, 0);
+	
+	cout << "CHARACTER TEXTURE INFO";
+	cout << "Channel count: " << channelCount << endl;
+	cout << "Width x Height: " << textureWidth << " x " << textureHeight << endl;
+
+	if (characterData) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, characterData);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	} else {
+		std::cout << "Failed to load texture." << std::endl;
+	}
+
+	stbi_image_free(characterData);
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glActiveTexture(GL_TEXTURE0);
