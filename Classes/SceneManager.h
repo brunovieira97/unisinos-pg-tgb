@@ -14,7 +14,7 @@ public:
 	void initialize(GLuint width, GLuint height);
 	void initializeGraphics();
 
-	void addShader(string vFilename, string fFilename);
+	void addShader();
 
 	// GLFW Callbacks
 	static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -41,14 +41,20 @@ public:
 private:
 	GLFWwindow *window;
 
+	unsigned int characterTexture;
+
+	GLuint charVAO;
+
 	// Shader program
-	Shader *shader;
+	Shader *shader, *shaderCharacter;
 
 	// Scene attributes
 	GLuint mapVAO, characterVAO;
 
 	// Transformations - Model Matrix
 	glm::mat4 modelMatrix;
+
+	glm::mat4 model;
 
 	// 2D Camera - Projection matrix
 	glm::mat4 projectionMatrix;

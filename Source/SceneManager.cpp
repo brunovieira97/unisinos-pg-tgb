@@ -41,6 +41,11 @@ void SceneManager::initialize(GLuint width, GLuint height) {
 void SceneManager::initializeGraphics() {
 	glfwInit();
 
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+
 	// Create a GLFWwindow object that we can use for GLFW's functions
 	window = glfwCreateWindow(width, height, "Trabalho do GB - Processamento Gráfico", nullptr, nullptr);
 	glfwMakeContextCurrent(window);
@@ -57,17 +62,17 @@ void SceneManager::initializeGraphics() {
 		std::cout << "Failed to initialize GLAD." << std::endl;
 
 	// Build and compile our shader program
-	addShader("Shaders/transformations.vs", "Shaders/transformations.frag");
+	addShader();
 
 	setupScene();
 
 	resized = true;
 }
 
-void SceneManager::addShader(string vFilename, string fFilename) {
-	shader = new Shader (vFilename.c_str(), fFilename.c_str());
+void SceneManager::addShader() {
+	shader = new Shader ("Shaders/transformations.vs", "Shaders/transformations.frag");
+	shaderCharacter = new Shader("Shaders/char.vs", "Shaders/char.frag");
 }
-
 
 void SceneManager::keyCallback(GLFWwindow * window, int key, int scancode, int action, int mode) {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
@@ -142,8 +147,36 @@ void SceneManager::renderMap() {
 	}
 }
 
+void SceneManager::renderCharacter() {
+	shaderCharacter -> Use();
+
+	// Create transformations 
+	model = glm::mat4();
+	model = glm::translate(model, glm::vec3(0, 0, 1));
+	glUniform1f(glGetUniformLocation(shader -> Program, "offsetx"), 0);
+	glUniform1f(glGetUniformLocation(shader -> Program, "offsety"), 0);
+
+	GLint modelLoc = glGetUniformLocation(shader->Program, "model");
+
+	// Passes transformations to Shaders
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+	if (resized) {
+		setupCamera2D();
+		resized = false;
+	}
+
+	glBindTexture(GL_TEXTURE_2D, characterTexture);
+	glUniform1i(glGetUniformLocation(shader -> Program, "texture"), 0);
+
+	// Render container
+	glBindVertexArray(charVAO);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+}
+
 void SceneManager::render() {
 	renderMap();
+	renderCharacter();
 }
 
 void SceneManager::run() {
@@ -205,53 +238,83 @@ void SceneManager::setupMap() {
 }
 
 void SceneManager::setupCharacter() {
-	float u = 1.0 / 6.0, v = 1.0;
-
-	float characterWidth = 64.0, characterHeight = 32.0;
-
-	float vertices[] = {
-		// Positions										// Colors					// Texture Coords
-		characterWidth/2,	characterHeight,	0.0f,		1.0f,	0.0f,	0.0f,		0.0f,	0.0f,		// Top 
-		characterWidth,		characterHeight/2,	0.0f,		0.0f,	1.0f,	0.0f,		u,		0.0f,		// Right
-		0.0f,				characterHeight/2,	0.0f,		0.0f,	0.0f,	1.0f,		0.0f,	v,			// Left
-		characterWidth/2,	0.0f,				0.0f,		1.0f,	1.0f,	0.0f,		u,		v			// Bottom
+	float character[] = {
+		 0.125f,	 0.239f, 1.0f,	1.0f, 0.0f, 0.0f,	1.0/4.0,	1.0/2.0,
+		 0.125f,	-0.011f, 1.0f,	0.0f, 1.0f, 0.0f,	1.0/4.0,	0.0f,
+		-0.125f,	-0.011f, 1.0f,	0.0f, 0.0f, 1.0f,	0.0f,		0.0f,
+		-0.125f,	 0.239f, 1.0f,	1.0f, 1.0f, 0.0f,	0.0f,		1.0/2.0  
 	};
 	
+	// First line = first triangle and so on
 	unsigned int indices[] = {
 		0, 1, 3,
-		0, 2, 3
+		1, 2, 3 
 	};
 
-	unsigned int characterVBO, characterEBO;
-	glGenVertexArrays(1, &characterVAO);
-	glGenBuffers(1, &characterVBO);
-	glGenBuffers(1, &characterEBO);
+	unsigned int charVBO, charEBO;
 
-	glBindVertexArray(characterVAO);
+	glGenVertexArrays(1, &charVAO);
+	glGenBuffers(1, &charVBO);
+	glGenBuffers(1, &charEBO);
 
-	glBindBuffer(GL_ARRAY_BUFFER, characterVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	glBindVertexArray(charVAO);
 
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, characterEBO);
+	glBindBuffer(GL_ARRAY_BUFFER, charVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(character), character, GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, charEBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-	// position attribute
+	// Position
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
-	// color attribute
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
-	// texture coord attribute
+
+	// Texture coords
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 	glEnableVertexAttribArray(2);
 
+	setupCharacterTexture();
+
+	glBindVertexArray(0);
+
 }
+
+void SceneManager::setupCharacterTexture() {
+	glGenTextures(1, &characterTexture);
+	glBindTexture(GL_TEXTURE_2D, characterTexture); 
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	// Loads image, creates texture and generates mipmaps
+	int charWidth, charHeight, charNrChannels;
+	unsigned char *charData = stbi_load("Resources/Character.png", &charWidth, &charHeight, &charNrChannels, 0);
+
+	if (charData) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, charWidth, charHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, charData);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	} else {
+		std::cout << "Failed to load main character texture" << std::endl;
+	}
+	stbi_image_free(charData);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glActiveTexture(GL_TEXTURE0);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
 
 void SceneManager::setupScene() {
 	setupMap();
 	setupMapTexture();
 
-	//setupCharacter();
+	setupCharacter();
 	//setupCharacterTexture();
 
 }
