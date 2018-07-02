@@ -18,6 +18,7 @@ public:
 
 	// GLFW Callbacks
 	static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
+	static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mode);
 	static void resize(GLFWwindow* window, int width, int height);
 
 	// Map
@@ -42,6 +43,13 @@ public:
 	void setupTexture();
 
 private:
+	GLfloat characterX, characterY;
+
+	unsigned int mapTexture, characterTexture;
+
+	int mapLayout[10][10];
+	int mapCanWalk[10][10];
+
 	GLFWwindow *window;
 
 	// Shader program
@@ -55,10 +63,5 @@ private:
 
 	// 2D Camera - Projection matrix
 	glm::mat4 projectionMatrix;
-
-	unsigned int mapTexture, characterTexture;
-
-	int mapLayout[10][10];
-	int mapCanWalk[10][10];
 };
 

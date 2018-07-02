@@ -4,6 +4,18 @@
 static bool keys[1024], resized;
 static GLuint width, height;
 
+float 
+	charTextureX = 1.0 / 9.0,
+	charTextureY = 1.0 / 8.0,
+	characterOffsetX = 2.0, 
+	characterOffsetY = 2.0;
+
+int
+	charTextureXoffset, 
+	charTextureYoffset;
+
+double mouseX, mouseY;
+
 SceneManager::SceneManager() {
 }
 
@@ -14,7 +26,6 @@ void SceneManager::initialize(GLuint width, GLuint height) {
 	::width = width;
 	::height = height;
 	
-	// TO DO: Config file
 	initializeGraphics();
 
 	ifstream file("Settings/Tilemap.txt");
@@ -39,28 +50,29 @@ void SceneManager::initialize(GLuint width, GLuint height) {
 }
 
 void SceneManager::initializeGraphics() {
+	characterX = 460.0;
+	characterY = 50.0;
+
+	charTextureXoffset = 0;
+	charTextureYoffset = 2;
+
 	glfwInit();
 
-	// Create a GLFWwindow object that we can use for GLFW's functions
 	window = glfwCreateWindow(width, height, "Trabalho do GB - Processamento Gráfico", nullptr, nullptr);
 	glfwMakeContextCurrent(window);
 
 	// Set the required callback functions
 	glfwSetKeyCallback(window, keyCallback);
-
-	//Setando a callback de redimensionamento da janela
 	glfwSetWindowSizeCallback(window, resize);
 	
-	// glad: load all OpenGL function pointers
-	// ---------------------------------------
 	if (!gladLoadGLLoader( (GLADloadproc) glfwGetProcAddress))
 		std::cout << "Failed to initialize GLAD." << std::endl;
 
-	// Build and compile our shader program
 	addShader("Shaders/transformations.vs", "Shaders/transformations.frag");
 
 	setupScene();
 
+	// Forcing camera setup on first run
 	resized = true;
 }
 
@@ -80,6 +92,13 @@ void SceneManager::keyCallback(GLFWwindow * window, int key, int scancode, int a
 	}
 }
 
+void SceneManager::mouseButtonCallback(GLFWwindow * window, int button, int action, int mode) {
+	if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+		glfwGetCursorPos(window, &mouseX, &mouseY);
+		std::cout << "Clique em: " << mouseX << " : " << mouseY << std::endl;
+	}
+}
+
 void SceneManager::resize(GLFWwindow * window, int width, int height) {
 	::width = width;
 	::height = height;
@@ -88,10 +107,66 @@ void SceneManager::resize(GLFWwindow * window, int width, int height) {
 	glViewport(0, 0, width, height);
 }
 
-
 void SceneManager::doMovement() {
 	if (keys[GLFW_KEY_ESCAPE])
 		glfwSetWindowShouldClose(window, GL_TRUE);
+
+	if (charTextureXoffset == 8)
+		charTextureXoffset = 1;
+
+	if ((keys[GLFW_KEY_UP]) or (keys[GLFW_KEY_LEFT]) or (keys[GLFW_KEY_RIGHT]) or (keys[GLFW_KEY_DOWN])) {
+		charTextureXoffset += 1;
+		Sleep(50);
+	} else {
+		charTextureXoffset = 0;
+	}
+
+	if (keys[GLFW_KEY_UP]) {
+		charTextureYoffset = 7;
+		characterY -= characterOffsetY;
+
+		if (keys[GLFW_KEY_RIGHT]) {
+			charTextureYoffset = 6;
+			characterX += characterOffsetX;
+		} else if (keys[GLFW_KEY_LEFT]) {
+			charTextureYoffset = 4;
+			characterX -= characterOffsetX;
+		}
+	} else if (keys[GLFW_KEY_RIGHT]) {
+		charTextureYoffset = 5;
+		characterX += characterOffsetX;
+
+		if (keys[GLFW_KEY_UP]) {
+			charTextureYoffset = 6;
+			characterY -= characterOffsetY;
+		} else if (keys[GLFW_KEY_DOWN]) {
+			charTextureYoffset = 2;
+			characterY += characterOffsetY;
+		}
+	} else if (keys[GLFW_KEY_LEFT]) {
+		charTextureYoffset = 3;
+		characterX -= characterOffsetX;
+
+		if (keys[GLFW_KEY_UP]) {
+			charTextureYoffset = 4;
+			characterY -= characterOffsetY;
+		} else if (keys[GLFW_KEY_DOWN]) {
+			charTextureYoffset = 0;
+			characterY += characterOffsetY;
+		}
+	} else if (keys[GLFW_KEY_DOWN]) {
+		charTextureYoffset = 1;
+		characterY += characterOffsetY;
+
+		if (keys[GLFW_KEY_RIGHT]) {
+			charTextureYoffset = 2;
+			characterX += characterOffsetX;
+		} else if (keys[GLFW_KEY_LEFT]) {
+			charTextureYoffset = 0;
+			characterX -= characterOffsetX;
+		}
+	}
+
 }
 
 void SceneManager::render() {
@@ -104,32 +179,27 @@ void SceneManager::render() {
 }
 
 void SceneManager::renderMap() {
-	// Clear the colorbuffer
-	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	// Render scene
-	shader->Use();
+	shader -> Use();
 
 	float xi = 0.0, yi = 0.0, xo = 500;
 
 	for (int i = 0; i < 10; i++) {
 		for (int j = 0; j < 10; j++) {
-			xi = ((i - j) * 64.0f / 2.0) + xo;
-			yi = (i + j) * 32.0f / 2.0;
+			xi = ((i - j) * 96.0f / 2.0) + xo;
+			yi = (i + j) * 48.0f / 2.0;
 
 			int currentTile = mapLayout[i][j];
 
-			GLint offsetLoc = glGetUniformLocation(shader->Program, "offsetUV");
-			glm::vec2 offset(currentTile/6.0, 0.0);
-			glUniform2f(offsetLoc, offset.x,offset.y);
+			GLint offsetLoc = glGetUniformLocation(shader -> Program, "offsetUV");
+			glm::vec2 offset(currentTile / 6.0, 0.0);
+			glUniform2f(offsetLoc, offset.x, offset.y);
 
 			// Create transformations
 			modelMatrix = glm::mat4();
-			modelMatrix = glm::translate(modelMatrix, glm::vec3(xi,yi,0.0));
+			modelMatrix = glm::translate(modelMatrix, glm::vec3(xi, yi, 0.0));
 
 			// Get their uniform location
-			GLint modelLoc = glGetUniformLocation(shader->Program, "model");
+			GLint modelLoc = glGetUniformLocation(shader -> Program, "model");
 
 			// Pass them to the shaders
 			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMatrix));
@@ -141,7 +211,7 @@ void SceneManager::renderMap() {
 
 			// Bind Textures using texture units
 			glBindTexture(GL_TEXTURE_2D, mapTexture);
-			glUniform1i(glGetUniformLocation(shader->Program, "ourTexture1"), 0);
+			glUniform1i(glGetUniformLocation(shader -> Program, "ourTexture1"), 0);
 
 			// render container
 			glBindVertexArray(mapVAO);
@@ -154,17 +224,14 @@ void SceneManager::renderMap() {
 void SceneManager::renderCharacter() {
 	shader->Use();
 
-	float xi = 0.0, yi = 0.0, xo = 500;
-
-	GLint offsetLoc = glGetUniformLocation(shader->Program, "offsetUV");
-	glm::vec2 offset(1/6.0, 0.0);
-	glUniform2f(offsetLoc, offset.x,offset.y);
+	GLint offsetLoc = glGetUniformLocation(shader -> Program, "offsetUV");
+	glm::vec2 offset((charTextureX * charTextureXoffset), (charTextureY * charTextureYoffset));
+	glUniform2f(offsetLoc, offset.x, offset.y);
 
 	// Create transformations
 	modelMatrix = glm::mat4();
-	modelMatrix = glm::translate(modelMatrix, glm::vec3(xi,yi,0.0));
+	modelMatrix = glm::translate(modelMatrix, glm::vec3(characterX, characterY, 0.0));
 
-	// Get their uniform location
 	GLint modelLoc = glGetUniformLocation(shader->Program, "model");
 
 	// Pass them to the shaders
@@ -177,7 +244,7 @@ void SceneManager::renderCharacter() {
 
 	// Bind Textures using texture units
 	glBindTexture(GL_TEXTURE_2D, characterTexture);
-	glUniform1i(glGetUniformLocation(shader->Program, "ourTexture1"), 0);
+	glUniform1i(glGetUniformLocation(shader -> Program, "ourTexture1"), 0);
 
 	// render container
 	glBindVertexArray(characterVAO);
@@ -203,7 +270,7 @@ void SceneManager::finish() {
 void SceneManager::setupMap() {
 	float u = 1.0 / 6.0, v = 1.0;
 
-	float mapWidth = 64.0, mapHeight = 32.0;
+	float mapWidth = 96.0, mapHeight = 48.0;
 
 	float vertices[] = {
 		// Positions							// Colors					// Texture Coords
@@ -247,21 +314,21 @@ void SceneManager::setupMap() {
 }
 
 void SceneManager::setupCharacter() {
-	float u = 1.0 / 6.0, v = 1.0;
+	float xPos = 1.0 / 9.0, yPos = 1.0 / 8.0;
 
-	float characterWidth = 64.0, characterHeight = 32.0;
+	float characterWidth = 96.0, characterHeight = 96.0;
 
 	float vertices[] = {
 		// Positions										// Colors					// Texture Coords
-		characterWidth/2,	characterHeight,	0.0f,		1.0f,	0.0f,	0.0f,		0.0f,	0.0f,		// Top 
-		characterWidth,		characterHeight/2,	0.0f,		0.0f,	1.0f,	0.0f,		u,		0.0f,		// Right
-		0.0f,				characterHeight/2,	0.0f,		0.0f,	0.0f,	1.0f,		0.0f,	v,			// Left
-		characterWidth/2,	0.0f,				0.0f,		1.0f,	1.0f,	0.0f,		u,		v			// Bottom
+		characterWidth,	characterHeight,	1.0f,		1.0f,	0.0f,	0.0f,		xPos,	yPos,		// Top Right
+		characterWidth,	0.0f,				1.0f,		0.0f,	1.0f,	0.0f,		xPos,	0.0f,		// Bottom Right
+		0.0f,			0.0f,				1.0f,		0.0f,	0.0f,	1.0f,		0.0f,	0.0f,		// Bottom Left
+		0.0f,			characterHeight,	1.0f,		1.0f,	1.0f,	0.0f,		0.0f,	yPos		// Top Left
 	};
 	
 	unsigned int indices[] = {
 		0, 1, 3,
-		0, 2, 3
+		1, 2, 3
 	};
 
 	unsigned int characterVBO, characterEBO;
@@ -298,7 +365,6 @@ void SceneManager::setupScene() {
 
 	setupCharacter();
 	renderCharacter();
-
 }
 
 void SceneManager::setupCamera2D() {
@@ -327,15 +393,15 @@ void SceneManager::setupMapTexture() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	int textureWidth, textureHeight, channelCount;
-	unsigned char *mapData = stbi_load("Resources/Terrain_Tileset.png", &textureWidth, &textureHeight, &channelCount, 0);
+	int mapWidth, mapHeight, mapChannelCount;
+	unsigned char *mapData = stbi_load("Resources/Terrain_Tileset.png", &mapWidth, &mapHeight, &mapChannelCount, 0);
 	
 	cout << "MAP TEXTURE INFO";
-	cout << "Channel count: " << channelCount << endl;
-	cout << "Width x Height: " << textureWidth << " x " << textureHeight << endl;
+	cout << "Channel count: " << mapChannelCount << endl;
+	cout << "Width x Height: " << mapWidth << " x " << mapHeight << endl;
 
 	if (mapData) {
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, mapData);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mapWidth, mapHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, mapData);
 		glGenerateMipmap(GL_TEXTURE_2D);
 	} else {
 		std::cout << "Failed to load texture." << std::endl;
